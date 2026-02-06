@@ -195,7 +195,29 @@ else
     fi
     echo ""
 
+<<<<<<< HEAD
     DOCKER_URL="https://desktop.docker.com/mac/main/arm64/Docker.dmg"
+=======
+    # Detect architecture correctly
+    ARCH=$(uname -m)
+    case "$ARCH" in
+        arm64)
+            DOCKER_URL="https://desktop.docker.com/mac/main/arm64/Docker.dmg"
+            ARCH_NAME="Apple Silicon (M1/M2/M3/M4)"
+            ;;
+        x86_64)
+            DOCKER_URL="https://desktop.docker.com/mac/main/amd64/Docker.dmg"
+            ARCH_NAME="Intel"
+            ;;
+        *)
+            error "Unsupported architecture: $ARCH"
+            exit 1
+            ;;
+    esac
+
+    success "Detected: $ARCH_NAME"
+    echo ""
+>>>>>>> 7157e7d8ea0cfbb172f75896571f1098828b86c5
 
     # Use unique temp path to avoid conflicts
     DMG_PATH="/tmp/Docker-$$-$(date +%s).dmg"
@@ -221,6 +243,7 @@ else
         error "Downloaded file is empty or missing"
         exit 1
     fi
+
 
     FILE_SIZE=$(stat -f %z "$DMG_PATH" 2>/dev/null || echo "0")
     if [[ "$FILE_SIZE" -lt 100000000 ]]; then  # Less than 100MB indicates problem
