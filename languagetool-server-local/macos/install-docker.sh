@@ -120,6 +120,7 @@ echo "Docker not found. Installing..."
 echo ""
 
 # Prefer Homebrew installation (most reliable)
+BREW_SUCCESS=false
 if command -v brew &> /dev/null; then
     success "Homebrew found - using for installation"
     echo ""
@@ -127,19 +128,34 @@ if command -v brew &> /dev/null; then
     echo "This may take 5-10 minutes..."
     echo ""
 
-    if brew install --cask docker; then
+    if brew install --cask docker 2>&1 | tee /tmp/brew_output.txt; then
         success "Docker Desktop installed"
+        BREW_SUCCESS=true
+        rm -f /tmp/brew_output.txt
     else
-        error "Homebrew installation failed"
-        echo ""
-        echo "Try manual installation:"
-        echo "1. Visit: https://www.docker.com/products/docker-desktop"
-        echo "2. Download for macOS"
-        echo "3. Install Docker.app to Applications"
-        exit 1
+        # Check if Homebrew itself has version requirements
+        if grep -q "does not run on macOS versions older than" /tmp/brew_output.txt 2>/dev/null; then
+            warn "Homebrew requires newer macOS version than installed"
+            echo ""
+            echo "This is a Homebrew compatibility issue, not a Docker issue."
+            echo "Switching to manual DMG download..."
+            echo ""
+        else
+            error "Homebrew installation failed"
+            echo ""
+            echo "Try manual installation:"
+            echo "1. Visit: https://www.docker.com/products/docker-desktop"
+            echo "2. Download for macOS"
+            echo "3. Install Docker.app to Applications"
+            rm -f /tmp/brew_output.txt
+            exit 1
+        fi
+        rm -f /tmp/brew_output.txt
     fi
+fi
 
-    # After Homebrew install, Docker CLI available but needs app launch
+if [[ "$BREW_SUCCESS" == "true" ]]; then
+    # After Homebrew successful install, Docker CLI available but needs app launch
     echo ""
     success "Installation complete"
     echo ""
@@ -161,17 +177,20 @@ if command -v brew &> /dev/null; then
         echo "Next step: ./start-languagetool.sh"
         exit 0
     else
-        error "Docker daemon not detected"
-        echo "Ensure Docker Desktop is running and try again"
+        error "Docker daemon did not start within 60 seconds"
+        echo "Please start Docker Desktop manually and run this script again"
         exit 1
     fi
-
 else
-    # Manual installation without Homebrew
-    warn "Homebrew not found - using manual installation"
-    echo ""
-    echo "Recommendation: Install Homebrew for easier package management"
-    echo "Visit: https://brew.sh"
+    # Manual installation (either Homebrew not available or failed with fallback)
+    if command -v brew &> /dev/null; then
+        warn "Homebrew available but installation failed - using manual DMG download"
+    else
+        warn "Homebrew not found - using manual installation"
+        echo ""
+        echo "Recommendation: Install Homebrew for easier package management"
+        echo "Visit: https://brew.sh"
+    fi
     echo ""
 
     # Detect architecture correctly
